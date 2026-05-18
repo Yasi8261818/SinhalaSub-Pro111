@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="si">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cineru Max - සිංහල උපසිරැසි සහ චිත්‍රපට</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Noto+Sans+Sinhala:wght@400;700&display=swap');
+        body {
+            font-family: 'Inter', 'Noto Sans Sinhala', sans-serif;
+            background-color: #0b0f19;
+        }
+        .text-neon {
+            color: #eab308;
+            text-shadow: 0 0 10px rgba(234, 179, 8, 0.3);
+        }
+    </style>
+</head>
+<body class="text-slate-200 min-h-screen flex flex-col">
+
+    <!-- 1. NAVIGATION BAR -->
+    <nav class="bg-slate-900/90 border-b border-slate-800 sticky top-0 z-50 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+            <!-- Logo -->
+            <div class="flex items-center gap-2">
+                <span class="text-2xl font-bold text-yellow-500 tracking-wider text-neon">CINERU<span class="text-white text-base">MAX</span></span>
+            </div>
+
+            <!-- Categories Tabs -->
+            <div class="hidden md:flex items-center gap-6 text-sm font-semibold">
+                <button onclick="fetchMovies('trending')" class="text-yellow-500 hover:text-yellow-400 transition">Trending</button>
+                <button onclick="fetchMovies('popular')" class="text-slate-400 hover:text-white transition">Popular</button>
+                <button onclick="fetchMovies('top_rated')" class="text-slate-400 hover:text-white transition">Top Rated</button>
+            </div>
+
+            <!-- Search Bar -->
+            <div class="relative flex-1 max-w-xs sm:max-w-md">
+                <input type="text" id="searchInput" oninput="searchMovies()" placeholder="ෆිල්ම් එකක නම සර්ච් කරන්න..." 
+                       class="w-full bg-slate-800 text-white placeholder-slate-400 text-sm rounded-lg pl-4 pr-10 py-2 focus:outline-none focus:ring-2 focus:ring-yellow-500 border border-slate-700 transition">
+                <span class="absolute right-3 top-2.5 text-slate-400">🔍</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 2. HERO SECTION -->
+    <header id="heroSection" class="relative h-[60vh] md:h-[70vh] bg-cover bg-center flex items-end">
+        <div class="absolute inset-0 bg-gradient-to-t from-[#0b0f19] via-[#0b0f19]/50 to-transparent"></div>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full pb-12">
+            <span class="bg-yellow-500 text-slate-950 font-bold text-xs px-2.5 py-1 rounded-md uppercase tracking-wider mb-3 inline-block">Trending #1</span>
+            <h1 id="heroTitle" class="text-3xl md:text-5xl font-bold text-white mb-4">Loading Feature Movie...</h1>
+            <p id="heroOverview" class="text-slate-300 max-w-2xl text-sm md:text-base mb-6 line-clamp-3">Please wait while we fetch the latest cinematic updates.</p>
+            <button onclick="openModalFromHero()" class="bg-yellow-500 hover:bg-yellow-400 text-slate-950 font-bold px-6 py-2.5 rounded-lg shadow-lg transition flex items-center gap-2 text-sm">
+                <span>⬇️</span> සිංහල උපසිරැසි බාගත කරගන්න
+            </button>
+        </div>
+    </header>
+
+    <!-- 3. MAIN CONTENT (MOVIE GRID) -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex-1 w-full">
+        <h2 id="sectionTitle" class="text-xl font-bold text-white mb-8 border-l-4 border-yellow-500 pl-3">අලුත්ම චිත්‍රපට (Trending Now)</h2>
+        
+        <!-- Grid Container -->
+        <div id="movieGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+            <!-- Movie Cards Will Inject Here Automatically -->
+        </div>
+    </main>
+
+    <!-- 4. MOVIE DETAIL MODAL (POPUP) -->
+    <div id="movieModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-3xl rounded-xl overflow-hidden max-h-[90vh] overflow-y-auto relative shadow-2xl">
+            <!-- Close Button -->
+            <button onclick="closeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-2xl z-10 bg-slate-950/60 w-10 h-10 rounded-full flex items-center justify-center">×</button>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 p-6">
+                <!-- Modal Poster -->
+                <div class="hidden md:block">
+                    <img id="modalPoster" src="" alt="Poster" class="w-full h-auto rounded-lg shadow-md border border-slate-800">
+                </div>
+                <!-- Modal Details -->
+                <div class="md:col-span-2 flex flex-col justify-between">
+                    <div>
+                        <h2 id="modalTitle" class="text-2xl font-bold text-white mb-2">Movie Title</h2>
+                        <div class="flex flex-wrap gap-2 mb-4 text-xs">
+                            <span id="modalYear" class="bg-slate-800 px-2.5 py-1 rounded text-slate-300">Year</span>
+                            <span id="modalRating" class="bg-yellow-500/20 text-yellow-400 font-bold px-2.5 py-1 rounded border border-yellow-500/30">⭐ 8.5</span>
+                            <span class="bg-emerald-500/20 text-emerald-400 px-2.5 py-1 rounded border border-emerald-500/30">සිංහල Sub</span>
+                        </div>
+                        <p class="text-yellow-500 font-semibold text-sm mb-1">කථා සාරාංශය / Overview:</p>
+                        <p id="modalOverview" class="text-slate-300 text-sm leading-relaxed mb-6">Description goes here...</p>
+                    </div>
+
+                    <!-- Download Section -->
+                    <div class="border-t border-slate-800 pt-4 space-y-3">
+                        <h4 class="text-sm font-bold text-white flex items-center gap-1">📥 බාගත කිරීමේ සබැඳි (Download Links):</h4>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <a href="#" target="_blank" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-center text-xs py-2.5 rounded font-medium text-slate-200 transition">
+                                🎬 Movie Download (720p Bluray)
+                            </a>
+                            <a href="#" target="_blank" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-center text-xs py-2.5 rounded font-medium text-slate-200 transition">
+                                🎬 Movie Download (1080p Bluray)
+                            </a>
+                        </div>
+                        <a href="https://github.com/vigneshwaran-r/Sinhala-Subtitles" target="_blank" class="bg-yellow-500 hover:bg-yellow-400 text-slate-950 text-center font-bold text-xs py-3 rounded block transition shadow-md">
+                            ✍️ සිංහල උපසිරැසිය බාගත කරගන්න (.SRT ෆායිල්)
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. JAVASCRIPT LOGIC -->
+    <script>
+        // ඔයා ලබාදුන් TMDB API Key එක සාර්ථකව ඇතුළත් කරන ලදී 👇
+        const API_KEY = "b3e4dcdee44f099232eb375b6a4e6990"; 
+        const BASE_URL = "https://api.themoviedb.org/3";
+        const IMG_URL = "https://image.tmdb.org/t/p/w500";
+        const BACKDROP_URL = "https://image.tmdb.org/t/p/original";
+
+        let currentHeroMovie = null;
+
+        // වෙබ් සයිට් එක මුලින්ම ඕපන් වෙද්දී ෆිල්ම්ส์ ලෝඩ් වෙන්න
+        document.addEventListener("DOMContentLoaded", () => {
+            fetchMovies('trending');
+        });
+
+        // TMDB API එකෙන් ඩේටා ගේන ප්‍රධාන Function එක
+        async function fetchMovies(type) {
+            let url = `${BASE_URL}/trending/movie/day?api_key=${API_KEY}`;
+            let titleText = "අලුත්ම චිත්‍රපට (Trending Now)";
+
+            if (type === 'popular') {
+                url = `${BASE_URL}/movie/popular?api_key=${API_KEY}`;
+                titleText = "ජනප්‍රියම චිත්‍රපට (Popular Movies)";
+            } else if (type === 'top_rated') {
+                url = `${BASE_URL}/movie/top_rated?api_key=${API_KEY}`;
+                titleText = "ඉහළම ප්‍රතිචාර ලැබූ (Top Rated)";
+            }
+
+            document.getElementById('sectionTitle').innerText = titleText;
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                displayMovies(data.results);
+                
+                // පළවෙනි ෆිල්ම් එක Hero Section එකට දාන්න
+                if (data.results.length > 0 && type === 'trending') {
+                    setupHero(data.results[0]);
+                }
+            } catch (error) {
+                console.error("Error fetching data:", error);
+            }
+        }
+
+        // Hero Banner එක සෙටප් කිරීම
+        function setupHero(movie) {
+            currentHeroMovie = movie;
+            document.getElementById('heroSection').style.backgroundImage = `url('${BACKDROP_URL}${movie.backdrop_path}')`;
+            document.getElementById('heroTitle').innerText = movie.title;
+            document.getElementById('heroOverview').innerText = movie.overview;
+        }
+
+        // ෆිල්ම්ส์ Grid එකට Inject කිරීම
+        function displayMovies(movies) {
+            const grid = document.getElementById('movieGrid');
+            grid.innerHTML = ""; // කලින් තිබ්බ ඒවා ක්ලියර් කරන්න
+
+            movies.forEach(movie => {
+                if(!movie.poster_path) return; // පෝස්ටර් නැත්නම් ස්කිප් කරන්න
+
+                const card = document.createElement('div');
+                card.className = "bg-slate-900 border border-slate-800 rounded-lg overflow-hidden shadow-lg cursor-pointer transform hover:-translate-y-1 hover:border-yellow-500/50 transition duration-300 flex flex-col justify-between group";
+                card.onclick = () => openModal(movie);
+
+                card.innerHTML = `
+                    <div class="relative overflow-hidden aspect-[2/3]">
+                        <img src="${IMG_URL}${movie.poster_path}" alt="${movie.title}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+                        <span class="absolute top-2 right-2 bg-slate-950/80 backdrop-blur-md text-yellow-400 text-xs font-bold px-2 py-0.5 rounded border border-slate-700">⭐ ${movie.vote_average.toFixed(1)}</span>
+                        <span class="absolute bottom-2 left-2 bg-emerald-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide">සිංහල Sub</span>
+                    </div>
+                    <div class="p-3 flex-1 flex flex-col justify-between">
+                        <h3 class="text-sm font-semibold text-white line-clamp-1 group-hover:text-yellow-400 transition">${movie.title}</h3>
+                        <div class="flex items-center justify-between mt-2">
+                            <span class="text-xs text-slate-400">${movie.release_date ? movie.release_date.split('-')[0] : 'N/A'}</span>
+                            <span class="text-xs text-yellow-500 font-bold group-hover:underline flex items-center gap-1">බාගත කරන්න <span>⬇️</span></span>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // Live Search ක්‍රියාවලිය
+        async function searchMovies() {
+            const query = document.getElementById('searchInput').value.trim();
+            if(query === "") {
+                fetchMovies('trending');
+                return;
+            }
+
+            const url = `${BASE_URL}/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(query)}`;
+            document.getElementById('sectionTitle').innerText = `"${query}" සඳහා සෙවුම් ප්‍රතිඵල...`;
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                displayMovies(data.results);
+            } catch (error) {
+                console.error("Error searching movies:", error);
+            }
+        }
+
+        // Modal (Popup) එක විවෘත කිරීම
+        function openModal(movie) {
+            document.getElementById('modalTitle').innerText = movie.title;
+            document.getElementById('modalPoster').src = `${IMG_URL}${movie.poster_path}`;
+            document.getElementById('modalYear').innerText = `Year: ${movie.release_date ? movie.release_date.split('-')[0] : 'N/A'}`;
+            document.getElementById('modalRating').innerText = `⭐ ${movie.vote_average.toFixed(1)} / 10`;
+            document.getElementById('modalOverview').innerText = movie.overview || "විස්තරයක් ඇතුළත් වී නොමැත.";
+            
+            document.getElementById('movieModal').classList.remove('hidden');
+            document.body.style.overflow = 'hidden'; // සයිට් එක ස්ක්‍රෝල් වෙන එක නවත්තන්න
+        }
+
+        function openModalFromHero() {
+            if(currentHeroMovie) openModal(currentHeroMovie);
+        }
+
+        // Modal එක වැසීම
+        function closeModal() {
+            document.getElementById('movieModal').classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        }
+    </script>
+</body>
+</html>
