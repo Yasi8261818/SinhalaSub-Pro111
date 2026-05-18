@@ -509,6 +509,38 @@
             border: 1px solid var(--border);
         }
 
+        /* Server selector */
+        .server-label {
+            font-size: 11px;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }
+
+        .server-tabs {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+
+        .srv-btn {
+            background: var(--card);
+            border: 1px solid var(--border);
+            color: var(--muted);
+            padding: 5px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 700;
+            transition: all 0.2s;
+        }
+
+        .srv-btn:hover { border-color: var(--gold); color: var(--gold); }
+        .srv-btn.active { background: var(--gold); color: #000; border-color: var(--gold); }
+
         /* ===== TOAST ===== */
         .toast {
             position: fixed;
@@ -616,213 +648,4 @@
 
             <div class="tv-controls" id="tv-controls">
                 <div class="control-group">
-                    <label>Season (සීසන්)</label>
-                    <input type="number" id="season-input" value="1" min="1" max="30" onchange="updateLinks()">
-                </div>
-                <div class="control-group">
-                    <label>Episode (එපිසෝඩ්)</label>
-                    <input type="number" id="episode-input" value="1" min="1" max="200" onchange="updateLinks()">
-                </div>
-            </div>
-
-            <div class="dl-section">
-                <a href="#" id="btn-stream" target="_blank" class="btn-dl btn-primary">▶ Stream / Watch Online</a>
-                <a href="#" id="btn-download" target="_blank" class="btn-dl btn-secondary">📥 Download (Direct)</a>
-                <p class="notice">⚠️ ඩවුන්ලෝඩ් කිරීමේදී Ad Block භාවිතා කිරීම නිර්දේශ කෙරේ</p>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="toast" id="toast"></div>
-
-<footer class="footer">
-    © 2025 <span>Lakshan Movies</span> — සිංහල සබ් සහිතව Movies & TV Series | HD Quality
-</footer>
-
-<script>
-    const API_KEY = 'b3e4dcdee44f099232eb375b6a4e6990';
-    const IMG = 'https://image.tmdb.org/t/p/w500';
-    const IMG_ORIG = 'https://image.tmdb.org/t/p/original';
-
-    let currentType = 'movie';
-    let currentItem = null;
-    let allItems = [];
-    let searchTimeout = null;
-
-    // ===== LOAD DATA =====
-    function loadData(type) {
-        currentType = type;
-        document.getElementById('tab-movie').classList.toggle('active', type === 'movie');
-        document.getElementById('tab-tv').classList.toggle('active', type === 'tv');
-        document.getElementById('section-title').innerText = type === 'movie' ? 'TRENDING MOVIES' : 'POPULAR TV SERIES';
-        document.getElementById('search-input').value = '';
-        showSkeletons();
-
-        fetch(`https://api.themoviedb.org/3/trending/${type}/week?api_key=${API_KEY}&language=en-US`)
-            .then(res => {
-                if (!res.ok) throw new Error('Network error');
-                return res.json();
-            })
-            .then(data => {
-                allItems = data.results.filter(i => i.poster_path);
-                renderGrid(allItems);
-                showHero(allItems[0]);
-            })
-            .catch(err => {
-                console.error(err);
-                document.getElementById('main-grid').innerHTML = `
-                    <div style="grid-column:1/-1; text-align:center; padding:60px 20px; color:var(--muted);">
-                        <div style="font-size:40px;margin-bottom:12px;">😕</div>
-                        <div style="font-size:16px;">Data load failed. Please check your connection.</div>
-                        <button onclick="loadData('${type}')" style="margin-top:16px;background:var(--gold);color:#000;border:none;padding:8px 20px;border-radius:6px;cursor:pointer;font-weight:700;">Retry</button>
-                    </div>`;
-                document.getElementById('result-count').innerText = 'Error';
-                document.getElementById('hero-banner').classList.remove('show');
-            });
-    }
-
-    // ===== HERO =====
-    function showHero(item) {
-        if (!item || !item.backdrop_path) {
-            document.getElementById('hero-banner').classList.remove('show');
-            return;
-        }
-        document.getElementById('hero-bg').src = IMG_ORIG + item.backdrop_path;
-        document.getElementById('hero-title').innerText = item.title || item.name;
-        document.getElementById('hero-meta').innerText = `⭐ ${item.vote_average?.toFixed(1) || 'N/A'} • ${(item.release_date || item.first_air_date || '').slice(0,4)}`;
-        document.getElementById('hero-download-btn').onclick = () => openModal(item);
-        document.getElementById('hero-banner').classList.add('show');
-    }
-
-    // ===== RENDER GRID =====
-    function renderGrid(items) {
-        const grid = document.getElementById('main-grid');
-        document.getElementById('result-count').innerText = `${items.length} results`;
-
-        if (items.length === 0) {
-            grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--muted);">No results found.</div>`;
-            return;
-        }
-
-        grid.innerHTML = '';
-        items.forEach(item => {
-            const title = item.title || item.name;
-            const year = (item.release_date || item.first_air_date || '').slice(0, 4);
-            const rating = item.vote_average ? item.vote_average.toFixed(1) : '';
-            const type = item.media_type === 'tv' || currentType === 'tv' ? 'tv' : 'movie';
-
-            const card = document.createElement('div');
-            card.className = 'movie-card';
-            card.onclick = () => openModal(item);
-            card.innerHTML = `
-                <div class="card-img-wrap">
-                    <img src="${IMG}${item.poster_path}" alt="${title}" loading="lazy">
-                    <div class="card-overlay"><div class="play-icon">▶</div></div>
-                    <span class="card-badge ${type}">${type === 'tv' ? 'TV' : 'MOVIE'}</span>
-                    <span class="card-badge quality">HD</span>
-                    ${rating ? `<span class="rating-badge">⭐ ${rating}</span>` : ''}
-                </div>
-                <div class="card-info">
-                    <div class="movie-title">${title}</div>
-                    <div class="movie-year">${year}</div>
-                </div>
-            `;
-            grid.appendChild(card);
-        });
-    }
-
-    // ===== SKELETONS =====
-    function showSkeletons() {
-        const grid = document.getElementById('main-grid');
-        grid.innerHTML = Array(16).fill('<div class="skeleton"></div>').join('');
-        document.getElementById('result-count').innerText = 'Loading...';
-        document.getElementById('hero-banner').classList.remove('show');
-    }
-
-    // ===== SEARCH =====
-    function searchMovies(query) {
-        clearTimeout(searchTimeout);
-        if (!query.trim()) { renderGrid(allItems); showHero(allItems[0]); return; }
-        document.getElementById('hero-banner').classList.remove('show');
-
-        searchTimeout = setTimeout(() => {
-            document.getElementById('result-count').innerText = 'Searching...';
-            fetch(`https://api.themoviedb.org/3/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(query)}&language=en-US`)
-                .then(res => res.json())
-                .then(data => {
-                    const results = data.results.filter(i => i.poster_path && (i.media_type === 'movie' || i.media_type === 'tv'));
-                    renderGrid(results);
-                })
-                .catch(() => showToast('Search failed. Try again.'));
-        }, 400);
-    }
-
-    // ===== OPEN MODAL =====
-    function openModal(item) {
-        currentItem = item;
-        const title = item.title || item.name;
-        const year = (item.release_date || item.first_air_date || '').slice(0, 4);
-        const rating = item.vote_average ? item.vote_average.toFixed(1) : 'N/A';
-        const type = item.media_type === 'tv' || currentType === 'tv' ? 'tv' : 'movie';
-
-        document.getElementById('modal-title').innerText = title;
-        document.getElementById('modal-meta').innerHTML = `<span>⭐ ${rating}</span> • ${year} • ${type.toUpperCase()}`;
-        document.getElementById('modal-poster').src = IMG + item.poster_path;
-
-        if (item.backdrop_path) {
-            document.getElementById('modal-bg').src = IMG + item.backdrop_path;
-        } else {
-            document.getElementById('modal-bg').src = IMG + item.poster_path;
-        }
-
-        const tvControls = document.getElementById('tv-controls');
-        if (type === 'tv') {
-            tvControls.classList.add('show');
-            updateLinks();
-        } else {
-            tvControls.classList.remove('show');
-            document.getElementById('btn-stream').href = `https://vidsrc.to/embed/movie/${item.id}`;
-            document.getElementById('btn-download').href = `https://dl.vidsrc.vip/movie/${item.id}`;
-        }
-
-        document.getElementById('dl-modal').classList.add('show');
-        document.body.style.overflow = 'hidden';
-    }
-
-    // ===== UPDATE TV LINKS =====
-    function updateLinks() {
-        if (!currentItem) return;
-        const s = document.getElementById('season-input').value || 1;
-        const e = document.getElementById('episode-input').value || 1;
-        document.getElementById('btn-stream').href = `https://vidsrc.to/embed/tv/${currentItem.id}/${s}/${e}`;
-        document.getElementById('btn-download').href = `https://dl.vidsrc.vip/tv/${currentItem.id}/${s}/${e}`;
-    }
-
-    // ===== CLOSE MODAL =====
-    function closeModal() {
-        document.getElementById('dl-modal').classList.remove('show');
-        document.body.style.overflow = '';
-    }
-
-    // Close modal on backdrop click
-    document.getElementById('dl-modal').addEventListener('click', function(e) {
-        if (e.target === this) closeModal();
-    });
-
-    // ESC key to close
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
-
-    // ===== TOAST =====
-    function showToast(msg) {
-        const t = document.getElementById('toast');
-        t.innerText = msg;
-        t.classList.add('show');
-        setTimeout(() => t.classList.remove('show'), 3000);
-    }
-
-    // ===== INIT =====
-    loadData('movie');
-</script>
-</body>
-</html>
+     
