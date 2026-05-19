@@ -509,6 +509,38 @@
             border: 1px solid var(--border);
         }
 
+        /* Server selector */
+        .server-label {
+            font-size: 11px;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }
+
+        .server-tabs {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+
+        .srv-btn {
+            background: var(--card);
+            border: 1px solid var(--border);
+            color: var(--muted);
+            padding: 5px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 700;
+            transition: all 0.2s;
+        }
+
+        .srv-btn:hover { border-color: var(--gold); color: var(--gold); }
+        .srv-btn.active { background: var(--gold); color: #000; border-color: var(--gold); }
+
         /* ===== TOAST ===== */
         .toast {
             position: fixed;
@@ -626,9 +658,18 @@
             </div>
 
             <div class="dl-section">
-                <a href="#" id="btn-stream" target="_blank" class="btn-dl btn-primary">▶ Stream / Watch Online</a>
-                <a href="#" id="btn-download" target="_blank" class="btn-dl btn-secondary">📥 Download (Direct)</a>
-                <p class="notice">⚠️ ඩවුන්ලෝඩ් කිරීමේදී Ad Block භාවිතා කිරීම නිර්දේශ කෙරේ</p>
+                <div class="server-label">🖥 Watch Server තෝරන්න</div>
+                <div class="server-tabs" id="stream-servers">
+                    <button class="srv-btn active" onclick="setStreamServer(0)">Server 1</button>
+                    <button class="srv-btn" onclick="setStreamServer(1)">Server 2</button>
+                    <button class="srv-btn" onclick="setStreamServer(2)">Server 3</button>
+                </div>
+                <a href="#" id="btn-stream" target="_blank" class="btn-dl btn-primary">▶ Online බලන්න (Watch)</a>
+
+                <div class="server-label" style="margin-top:10px;">📥 Download Sites</div>
+                <div id="dl-links-wrap"></div>
+
+                <p class="notice">⚠️ Site එකකට ගිහින් movie name search කරන්න • Ad Blocker නිර්දේශිතයි</p>
             </div>
         </div>
     </div>
@@ -649,6 +690,61 @@
     let currentItem = null;
     let allItems = [];
     let searchTimeout = null;
+    let activeStreamServer = 0;
+
+    // ===== STREAM SERVERS =====
+    function getStreamUrl(id, type, s, e) {
+        const servers = {
+            movie: [
+                `https://vidsrc.xyz/embed/movie?tmdb=${id}`,
+                `https://multiembed.mov/?video_id=${id}&tmdb=1`,
+                `https://player.smashy.stream/movie/${id}`
+            ],
+            tv: [
+                `https://vidsrc.xyz/embed/tv?tmdb=${id}&season=${s}&episode=${e}`,
+                `https://multiembed.mov/?video_id=${id}&tmdb=1&s=${s}&e=${e}`,
+                `https://player.smashy.stream/tv/${id}?s=${s}&e=${e}`
+            ]
+        };
+        return servers[type][activeStreamServer] || servers[type][0];
+    }
+
+    function setStreamServer(idx) {
+        activeStreamServer = idx;
+        document.querySelectorAll('#stream-servers .srv-btn').forEach((b,i) => b.classList.toggle('active', i===idx));
+        updateLinks();
+    }
+
+    // ===== BUILD DOWNLOAD SITE LINKS =====
+    function buildDlLinks(title, year, type) {
+        const q = encodeURIComponent(title + ' ' + year);
+        const qt = encodeURIComponent(title);
+        const sites = type === 'tv'
+            ? [
+                { icon:'🔥', name:'1337x — TV Series', url:`https://1337x.to/search/${q}+season/1/` },
+                { icon:'📺', name:'EZTV — TV Episodes',  url:`https://eztv.re/search/${qt}` },
+                { icon:'🌐', name:'Torrent Galaxy — TV', url:`https://torrentgalaxy.to/torrents.php?search=${qt}` },
+                { icon:'🎬', name:'YTS — Movies & More', url:`https://yts.mx/browse-movies/${qt}` },
+              ]
+            : [
+                { icon:'🥇', name:'YTS — HD / 4K Blu-ray', url:`https://yts.mx/browse-movies/${qt}/all/all/0/seeds/0/all` },
+                { icon:'🔥', name:'1337x — ඕනෑ Quality', url:`https://1337x.to/search/${q}/1/` },
+                { icon:'🌐', name:'Torrent Galaxy',        url:`https://torrentgalaxy.to/torrents.php?search=${qt}` },
+                { icon:'🔎', name:'Nyaa (Anime / Sub)',    url:`https://nyaa.si/?q=${qt}` },
+              ];
+
+        const wrap = document.getElementById('dl-links-wrap');
+        wrap.innerHTML = '';
+        sites.forEach(s => {
+            const a = document.createElement('a');
+            a.href = s.url;
+            a.target = '_blank';
+            a.className = 'btn-dl btn-secondary';
+            a.style.marginBottom = '8px';
+            a.innerHTML = `${s.icon} ${s.name}`;
+            wrap.appendChild(a);
+        });
+    }
 
     // ===== LOAD DATA =====
     function loadData(type) {
@@ -761,6 +857,9 @@
     // ===== OPEN MODAL =====
     function openModal(item) {
         currentItem = item;
+        activeStreamServer = 0;
+        document.querySelectorAll('#stream-servers .srv-btn').forEach((b,i) => b.classList.toggle('active', i===0));
+
         const title = item.title || item.name;
         const year = (item.release_date || item.first_air_date || '').slice(0, 4);
         const rating = item.vote_average ? item.vote_average.toFixed(1) : 'N/A';
@@ -769,34 +868,30 @@
         document.getElementById('modal-title').innerText = title;
         document.getElementById('modal-meta').innerHTML = `<span>⭐ ${rating}</span> • ${year} • ${type.toUpperCase()}`;
         document.getElementById('modal-poster').src = IMG + item.poster_path;
-
-        if (item.backdrop_path) {
-            document.getElementById('modal-bg').src = IMG + item.backdrop_path;
-        } else {
-            document.getElementById('modal-bg').src = IMG + item.poster_path;
-        }
+        document.getElementById('modal-bg').src = item.backdrop_path ? IMG + item.backdrop_path : IMG + item.poster_path;
 
         const tvControls = document.getElementById('tv-controls');
         if (type === 'tv') {
             tvControls.classList.add('show');
-            updateLinks();
+            document.getElementById('season-input').value = 1;
+            document.getElementById('episode-input').value = 1;
         } else {
             tvControls.classList.remove('show');
-            document.getElementById('btn-stream').href = `https://vidsrc.to/embed/movie/${item.id}`;
-            document.getElementById('btn-download').href = `https://dl.vidsrc.vip/movie/${item.id}`;
         }
 
+        buildDlLinks(title, year, type);
+        updateLinks();
         document.getElementById('dl-modal').classList.add('show');
         document.body.style.overflow = 'hidden';
     }
 
-    // ===== UPDATE TV LINKS =====
+    // ===== UPDATE STREAM LINK =====
     function updateLinks() {
         if (!currentItem) return;
+        const type = currentItem.media_type === 'tv' || currentType === 'tv' ? 'tv' : 'movie';
         const s = document.getElementById('season-input').value || 1;
         const e = document.getElementById('episode-input').value || 1;
-        document.getElementById('btn-stream').href = `https://vidsrc.to/embed/tv/${currentItem.id}/${s}/${e}`;
-        document.getElementById('btn-download').href = `https://dl.vidsrc.vip/tv/${currentItem.id}/${s}/${e}`;
+        document.getElementById('btn-stream').href = getStreamUrl(currentItem.id, type, s, e);
     }
 
     // ===== CLOSE MODAL =====
@@ -805,12 +900,10 @@
         document.body.style.overflow = '';
     }
 
-    // Close modal on backdrop click
     document.getElementById('dl-modal').addEventListener('click', function(e) {
         if (e.target === this) closeModal();
     });
 
-    // ESC key to close
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
     // ===== TOAST =====
